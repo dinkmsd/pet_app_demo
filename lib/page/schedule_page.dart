@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_app/app/data/models/schedule_info.dart';
 import 'package:pet_app/app/data/theme_data.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class SchedulePage extends StatefulWidget {
   @override
@@ -17,6 +18,39 @@ class _SchedulePageState extends State<SchedulePage> {
   bool _validate = true;
   final _titleController = TextEditingController();
   final _weightController = TextEditingController();
+
+  void pushRealtimeSche(List<ScheduleInfo> schedules) async {
+    DatabaseReference ref = FirebaseDatabase.instance.ref("pet_app_demo");
+    await ref
+        .set({"sche0": "00000000", "sche1": "00000000", "sche2": "00000000"});
+    int i = 0;
+    for (final e in schedules) {
+      var str = DateFormat.Hm().format(e.timeSetting);
+      str = str + "00" + e.weight.toString() + e.status.toString();
+      var demo = str.replaceAll(':', '');
+      str = demo.replaceAll('true', '1');
+      demo = str.replaceAll('false', '0');
+      switch (i) {
+        case 0:
+          await ref.update({
+            "sche0": demo,
+          });
+          break;
+        case 1:
+          await ref.update({
+            "sche1": demo,
+          });
+          break;
+        case 2:
+          await ref.update({
+            "sche2": demo,
+          });
+          break;
+      }
+      i++;
+    }
+    print(i);
+  }
 
   @override
   void initState() {
@@ -55,9 +89,10 @@ class _SchedulePageState extends State<SchedulePage> {
                         return Text('Something went wrong! ${snapshot}');
                       } else if (snapshot.hasData) {
                         final schedules = snapshot.data!;
+                        pushRealtimeSche(schedules);
                         return ListView(
                           children: schedules.map(buildSchedule).followedBy([
-                            if (schedules.length < 5)
+                            if (schedules.length < 3)
                               DottedBorder(
                                 strokeWidth: 2,
                                 color: CustomColors.clockOutline,
@@ -78,6 +113,7 @@ class _SchedulePageState extends State<SchedulePage> {
                                       _alarmTimeString = DateFormat('HH:mm')
                                           .format(DateTime.now());
                                       showModalBottomSheet(
+                                        isScrollControlled: true,
                                         useRootNavigator: true,
                                         context: context,
                                         clipBehavior: Clip.antiAlias,
@@ -175,6 +211,8 @@ class _SchedulePageState extends State<SchedulePage> {
                                                               .text
                                                               .isNotEmpty) {
                                                             createUser();
+                                                            pushRealtimeSche(
+                                                                schedules);
                                                             setState(() =>
                                                                 _validate =
                                                                     true);

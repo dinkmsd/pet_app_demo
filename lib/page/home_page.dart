@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_app/app/data/models/schedule_info.dart';
 import 'package:pet_app/app/data/theme_data.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,6 +22,12 @@ class HomePageState extends State<HomePage> {
   final _formKey = GlobalKey<FormState>();
   final _controller = TextEditingController();
   bool _validate = true;
+
+  void pushTask(String weight) async {
+    DatabaseReference ref = FirebaseDatabase.instance.ref("hand_push");
+    await ref.set({"push": weight});
+    print("succesed push");
+  }
 
   @override
   void initState() {
@@ -79,6 +86,7 @@ class HomePageState extends State<HomePage> {
                             });
                             return;
                           }
+                          pushTask(_controller.text);
                           DateTime time = DateTime.now();
                           String timeString = time.toIso8601String();
                           final docUser = FirebaseFirestore.instance
@@ -164,7 +172,7 @@ class HomePageState extends State<HomePage> {
                   if (flag == true) {
                     nextSchedule = schedules[i];
                   } else {
-                    nextSchedule = schedules[0];
+                    nextSchedule = schedules[schedules.length - 1];
                   }
                   alarmTime =
                       DateFormat('hh:mm aa').format(nextSchedule.timeSetting);
