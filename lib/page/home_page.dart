@@ -21,12 +21,26 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   final _formKey = GlobalKey<FormState>();
   final _controller = TextEditingController();
+  final _maxFoodController = TextEditingController();
+  bool _maxFoodValidate = true;
   bool _validate = true;
+  var maxFood = "0";
 
   void pushTask(String weight) async {
     DatabaseReference ref = FirebaseDatabase.instance.ref("hand_push");
     await ref.set({"push": weight});
     print("succesed push");
+  }
+
+  void setMaxFood() async {
+    final ref = FirebaseDatabase.instance.ref();
+    final snapshot = await ref.child('pet_app_demo/maxfood').get();
+    if (snapshot.exists) {
+      maxFood = snapshot.value.toString();
+    } else {
+      print('No data available.');
+      maxFood = "0";
+    }
   }
 
   @override
@@ -35,7 +49,9 @@ class HomePageState extends State<HomePage> {
     super.initState();
     _controller.addListener(() {
       final validate = _controller.text.isNotEmpty;
+      final maxFoodValidate = _maxFoodController.text.isNotEmpty;
       setState(() {
+        _maxFoodValidate = maxFoodValidate;
         _validate = validate;
       });
     });
@@ -55,6 +71,58 @@ class HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               buildSchedule(),
+              Container(
+                padding: EdgeInsets.fromLTRB(10, 2, 10, 2),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: Color.fromRGBO(52, 73, 94, 1.0))),
+                child: Row(
+                  children: <Widget>[
+                    Flexible(
+                      child: TextField(
+                        controller: _maxFoodController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                            labelText: 'Set max food',
+                            border: InputBorder.none,
+                            errorText: _maxFoodValidate
+                                ? null
+                                : 'Can\'t empty this feild'),
+                      ),
+                    ),
+                    ElevatedButton(
+                        onPressed: _maxFoodValidate
+                            ? () {
+                                if (_maxFoodController.text.isEmpty) {
+                                  setState(() {
+                                    _maxFoodValidate = false;
+                                  });
+                                  return;
+                                }
+                                //TODO
+                                DatabaseReference ref = FirebaseDatabase
+                                    .instance
+                                    .ref("pet_app_demo");
+                                ref.update(
+                                    {"maxfood": _maxFoodController.text});
+                                _maxFoodController.clear();
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                setState(() {
+                                  _maxFoodValidate = true;
+                                });
+                              }
+                            : () {
+                                setState(() {
+                                  _maxFoodValidate = false;
+                                });
+                              },
+                        child: const Text("Set"))
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 20,
+              ),
               Container(
                 padding: EdgeInsets.fromLTRB(10, 2, 10, 2),
                 decoration: BoxDecoration(
@@ -125,6 +193,14 @@ class HomePageState extends State<HomePage> {
   Widget buildSchedule() {
     var gradientColor = GradientTemplate.gradientTemplate[0].colors;
     var alarmTime = DateFormat('hh:mm aa').format(DateTime.now());
+    setMaxFood();
+    DatabaseReference starCountRef =
+        FirebaseDatabase.instance.ref('pet_app_demo/maxfood');
+    starCountRef.onValue.listen((DatabaseEvent event) {
+      final data = event.snapshot.value;
+      maxFood = data.toString();
+      print(maxFood);
+    });
     return Container(
         margin: const EdgeInsets.only(bottom: 32),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -220,7 +296,7 @@ class HomePageState extends State<HomePage> {
                     height: 10,
                   ),
                   Text(
-                    'Remaining: 1000 gam',
+                    'Max food: ${maxFood} gam',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,

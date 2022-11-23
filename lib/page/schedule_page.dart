@@ -21,8 +21,8 @@ class _SchedulePageState extends State<SchedulePage> {
 
   void pushRealtimeSche(List<ScheduleInfo> schedules) async {
     DatabaseReference ref = FirebaseDatabase.instance.ref("pet_app_demo");
-    await ref
-        .set({"sche0": "00000000", "sche1": "00000000", "sche2": "00000000"});
+    await ref.update(
+        {"sche0": "00000000", "sche1": "00000000", "sche2": "00000000"});
     int i = 0;
     for (final e in schedules) {
       var str = DateFormat.Hm().format(e.timeSetting);

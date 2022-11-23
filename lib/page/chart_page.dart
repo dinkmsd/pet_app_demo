@@ -21,15 +21,31 @@ class ChartBar extends StatefulWidget {
 class ChartBarState extends State<ChartBar> {
   Future<List<OrderStats>> getOrderStats(int counter) {
     final calDate = DateTime.now().subtract(Duration(days: counter));
+    String date1 = calDate.year.toString() +
+        '-' +
+        calDate.month.toString() +
+        '-' +
+        calDate.day.toString() +
+        ' ' +
+        '00:00:00';
+    String date2 = calDate.year.toString() +
+        '-' +
+        calDate.month.toString() +
+        '-' +
+        (calDate.day + 1).toString() +
+        ' ' +
+        '00:00:00';
+    print(date1);
+    print(date2);
     return FirebaseFirestore.instance
         .collection('history')
         .orderBy('time')
-        .where('time',
-            isGreaterThanOrEqualTo:
-                DateTime(calDate.year, calDate.month, calDate.day))
-        .where('time',
-            isLessThanOrEqualTo:
-                DateTime(calDate.year, calDate.month, calDate.day + 1))
+        .where('time', isGreaterThanOrEqualTo: date1
+            // DateTime(calDate.year, calDate.month, calDate.day
+            )
+        .where('time', isLessThanOrEqualTo: date2
+            // DateTime(calDate.year, calDate.month, calDate.day + 1)
+            )
         .get()
         .then((querySnapshot) => querySnapshot.docs
             .asMap()
@@ -39,6 +55,7 @@ class ChartBarState extends State<ChartBar> {
   }
 
   // Variable
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,7 +111,6 @@ class ChartBarState extends State<ChartBar> {
                       ),
                     ))),
             FutureBuilder(
-              // future: orderStatsController.stats.value,
               future: getOrderStats(widget.counter),
               builder: (BuildContext context,
                   AsyncSnapshot<List<OrderStats>> snapshot) {
@@ -113,9 +129,90 @@ class ChartBarState extends State<ChartBar> {
                   ),
                 );
               },
-            )
+            ),
+            // add here
+            FutureBuilder(
+              future: getOrderStats(widget.counter),
+              builder: (BuildContext context,
+                  AsyncSnapshot<List<OrderStats>> snapshot) {
+                if (snapshot.hasData) {
+                  return buildSchedule(snapshot.data!);
+                } else if (snapshot.hasError) {
+                  return Text('${snapshot.error}');
+                }
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.black,
+                  ),
+                );
+              },
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget buildSchedule(List<OrderStats> finalList) {
+    int total = 0;
+    for (int i = 0; i < finalList.length; i++) {
+      total += finalList[i].weight;
+    }
+    var gradientColor = GradientTemplate.gradientTemplate[1].colors;
+    return Container(
+      margin: const EdgeInsets.all(32),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
+      decoration: BoxDecoration(
+        color: Color.fromRGBO(52, 73, 94, 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColor.last.withOpacity(0.4),
+            blurRadius: 4,
+            spreadRadius: 2,
+            offset: Offset(4, 4),
+          ),
+        ],
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.label,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    "Info",
+                    style: TextStyle(color: Colors.white, fontFamily: 'avenir'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Text(
+            'Total Amount: ${total} gam',
+            style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'avenir',
+                fontSize: 24,
+                fontWeight: FontWeight.w700),
+          ),
+          Text(
+            'Time(s): ${finalList.length}',
+            style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'avenir',
+                fontSize: 24,
+                fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }
@@ -131,10 +228,24 @@ class CustomBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final finalList = <OrderStats>[];
+    if (orderStats.length != 0) {
+      print('Join Chart');
+      finalList.add(orderStats[0]);
+      int count = 0;
+      for (int i = 1; i < orderStats.length; i++) {
+        if (orderStats[i].dateTime.hour == finalList[count].dateTime.hour) {
+          finalList[count].weight += orderStats[i].weight;
+        } else {
+          finalList.add(orderStats[i]);
+          count++;
+        }
+      }
+    }
     List<charts.Series<OrderStats, String>> series = [
       charts.Series(
         id: 'id',
-        data: orderStats,
+        data: finalList,
         domainFn: (series, _) =>
             DateFormat.H().format(series.dateTime).toString(),
         measureFn: (series, _) => series.weight,
@@ -145,9 +256,5 @@ class CustomBarChart extends StatelessWidget {
       series,
       animate: true,
     );
-  }
-
-  Widget switchDate() {
-    return Container();
   }
 }
