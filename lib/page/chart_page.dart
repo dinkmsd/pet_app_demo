@@ -40,12 +40,8 @@ class ChartBarState extends State<ChartBar> {
     return FirebaseFirestore.instance
         .collection('history')
         .orderBy('time')
-        .where('time', isGreaterThanOrEqualTo: date1
-            // DateTime(calDate.year, calDate.month, calDate.day
-            )
-        .where('time', isLessThanOrEqualTo: date2
-            // DateTime(calDate.year, calDate.month, calDate.day + 1)
-            )
+        .where('time', isGreaterThanOrEqualTo: date1)
+        .where('time', isLessThanOrEqualTo: date2)
         .get()
         .then((querySnapshot) => querySnapshot.docs
             .asMap()

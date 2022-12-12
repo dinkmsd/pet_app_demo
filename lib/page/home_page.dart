@@ -25,6 +25,7 @@ class HomePageState extends State<HomePage> {
   bool _maxFoodValidate = true;
   bool _validate = true;
   var maxFood = "0";
+  var indexColor = 0;
 
   void pushTask(String weight) async {
     DatabaseReference ref = FirebaseDatabase.instance.ref("hand_push");
@@ -33,10 +34,12 @@ class HomePageState extends State<HomePage> {
   }
 
   void setMaxFood() async {
+    print("Set max food init");
     final ref = FirebaseDatabase.instance.ref();
     final snapshot = await ref.child('pet_app_demo/maxfood').get();
     if (snapshot.exists) {
       maxFood = snapshot.value.toString();
+      print("maxfood: ${maxFood}");
     } else {
       print('No data available.');
       maxFood = "0";
@@ -46,19 +49,31 @@ class HomePageState extends State<HomePage> {
   @override
   void initState() {
     // TODO: implement initState
-    super.initState();
-    _controller.addListener(() {
-      final validate = _controller.text.isNotEmpty;
+    DatabaseReference starCountRef =
+        FirebaseDatabase.instance.ref('pet_app_demo/maxfood');
+    starCountRef.onValue.listen((DatabaseEvent event) {
+      final data = event.snapshot.value;
+      maxFood = data.toString();
+    });
+
+    _maxFoodController.addListener(() {
       final maxFoodValidate = _maxFoodController.text.isNotEmpty;
       setState(() {
         _maxFoodValidate = maxFoodValidate;
+      });
+    });
+    _controller.addListener(() {
+      final validate = _controller.text.isNotEmpty;
+      setState(() {
         _validate = validate;
       });
+      super.initState();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    print("Launch screen!!");
     return Scaffold(
       appBar: AppBar(
         title: Text('Home'),
@@ -100,6 +115,7 @@ class HomePageState extends State<HomePage> {
                                   return;
                                 }
                                 //TODO
+                                print("Passed");
                                 DatabaseReference ref = FirebaseDatabase
                                     .instance
                                     .ref("pet_app_demo");
@@ -191,16 +207,23 @@ class HomePageState extends State<HomePage> {
   }
 
   Widget buildSchedule() {
-    var gradientColor = GradientTemplate.gradientTemplate[0].colors;
+    var gradientColor = GradientTemplate.gradientTemplate[indexColor].colors;
     var alarmTime = DateFormat('hh:mm aa').format(DateTime.now());
+    var currentFood = '0';
     setMaxFood();
     DatabaseReference starCountRef =
         FirebaseDatabase.instance.ref('pet_app_demo/maxfood');
     starCountRef.onValue.listen((DatabaseEvent event) {
       final data = event.snapshot.value;
       maxFood = data.toString();
-      print(maxFood);
     });
+    DatabaseReference remainFood =
+        FirebaseDatabase.instance.ref('container/remaining');
+    remainFood.onValue.listen((DatabaseEvent event) {
+      final data = event.snapshot.value;
+      currentFood = data.toString();
+    });
+
     return Container(
         margin: const EdgeInsets.only(bottom: 32),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -295,12 +318,35 @@ class HomePageState extends State<HomePage> {
                   SizedBox(
                     height: 10,
                   ),
-                  Text(
-                    'Max food: ${maxFood} gam',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
+                  Container(
+                    child: StreamBuilder(
+                        stream: starCountRef.onValue,
+                        builder: (context, snapshot) {
+                          return Text(
+                            'Max food: ${maxFood} gam',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          );
+                        }),
+                  ),
+                  Container(
+                    child: StreamBuilder(
+                        stream: remainFood.onValue,
+                        builder: (context, snapshot) {
+                          var x = int.parse(currentFood);
+                          if (x < 0) {
+                            currentFood = '0';
+                          }
+                          return Text(
+                            'Remaining food: ${currentFood} gam',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          );
+                        }),
                   ),
                 ],
               );
